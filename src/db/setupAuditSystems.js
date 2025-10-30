@@ -14,7 +14,6 @@ async function setupAuditTable() {
         subject_entity_id TEXT,
         related_anchors JSONB,
         data JSONB,
-
         actor_id TEXT,
         actor_type TEXT,
         source TEXT DEFAULT 'system',

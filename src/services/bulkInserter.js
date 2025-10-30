@@ -18,6 +18,7 @@ export async function insertBulkAuditEvents(messages) {
     chunks.push(messages.slice(i, i + MAX_BATCH));
   }
 
+  let totalInserted = 0;
   for (const [i, chunk] of chunks.entries()) {
     const values = [];
     const placeholders = [];
@@ -57,7 +58,14 @@ export async function insertBulkAuditEvents(messages) {
       ON CONFLICT (subject_entity_id) DO NOTHING;
     `;
 
-    await pool.query(query, values);
-    console.log(`✅ Batch ${i + 1}/${chunks.length} inserted (${chunk.length} records)`);
+    // Try insert and check how many rows inserted (rows = result.rowCount)
+    const result = await pool.query(query, values);
+    totalInserted += result.rowCount;
+    if (result.rowCount > 0) {
+      console.log(`✅ Batch ${i + 1}/${chunks.length} inserted (${result.rowCount} records)`);
+    } else {
+      console.log(`⏭️ Batch ${i + 1}/${chunks.length}: All records skipped (duplicates already exist in DB)`);
+    }
   }
+  return { insertedCount: totalInserted };
 }

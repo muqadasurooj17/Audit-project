@@ -73,6 +73,51 @@ const dummyData = {
       action_code: "order.item.create",
       data: { diff: { quantity: { from: 0, to: 3 } } }
     },
+    OI_9936: {
+      anchor_entity_type: "ORDER",
+      anchor_entity_id: "ORD_4823",
+      subject_entity_type: "ORDER_ITEM",
+      subject_entity_id: "OI_9936",
+      related_anchors: [{ type: "KITCHEN", id: "KIT_125" }],
+      action_code: "order.item.create",
+      data: { diff: { quantity: { from: 0, to: 3 } } }
+    },
+    OI_9937: {
+      anchor_entity_type: "ORDER",
+      anchor_entity_id: "ORD_4823",
+      subject_entity_type: "ORDER_ITEM",
+      subject_entity_id: "OI_9937",
+      related_anchors: [{ type: "KITCHEN", id: "KIT_125" }],
+      action_code: "order.item.create",
+      data: { diff: { quantity: { from: 0, to: 3 } } }
+    },
+    OI_9938: {
+      anchor_entity_type: "ORDER",
+      anchor_entity_id: "ORD_4823",
+      subject_entity_type: "ORDER_ITEM",
+      subject_entity_id: "OI_9938",
+      related_anchors: [{ type: "KITCHEN", id: "KIT_125" }],
+      action_code: "order.item.create",
+      data: { diff: { quantity: { from: 0, to: 3 } } }
+    },
+    OI_9939: {
+      anchor_entity_type: "ORDER",
+      anchor_entity_id: "ORD_4829",
+      subject_entity_type: "ORDER_ITEM",
+      subject_entity_id: "OI_9939",
+      related_anchors: [{ type: "KITCHEN", id: "KIT_125" }],
+      action_code: "order.item.create",
+      data: { diff: { quantity: { from: 0, to: 3 } } }
+    },
+    OI_9940: {
+      anchor_entity_type: "ORDER",
+      anchor_entity_id: "ORD_4849",
+      subject_entity_type: "ORDER_ITEM",
+      subject_entity_id: "OI_9940",
+      related_anchors: [{ type: "KITCHEN", id: "KIT_125" }],
+      action_code: "order.item.create",
+      data: { diff: { quantity: { from: 0, to: 3 } } }
+    },
   
     // ----------- DISCOUNT -----------
     DP_9901: {
