@@ -3,8 +3,9 @@ import crypto from "crypto";
 import redisClient from "./db/redisClient.js";
 import dummyData from "./dummyData.js";
 import { publishAuditEvent } from "./services/redisFetcher.js";
+import { logAuditQueueMessages } from "./db/rabbitmq.js";
 const router = express.Router();
-const TTL_SECONDS =  15 * 60; // 15 minutes
+const TTL_SECONDS =  2 * 60; // 15 minutes
 
 router.get("/initiateAudit", async (req, res) => {
   try {
@@ -19,16 +20,17 @@ router.get("/initiateAudit", async (req, res) => {
       return res.status(404).json({ error: `No data found for subject_id: ${subject_id}` });
     }
 
-    const currentEntityId = record.anchor_entity_id;
-    const cachedEntityId = await redisClient.get("current_entity_id");
+    // Replace entity id logic with subject_entity_type tracking
+    const currentSubjectEntityType = record.subject_entity_type;
+    const cachedEntityType = await redisClient.get("current_subject_entity_type");
 
-    // 2️⃣ Reset cache if entity changed
-    if (cachedEntityId && cachedEntityId !== currentEntityId) {
-      console.log(`🔄 Entity changed (${cachedEntityId} → ${currentEntityId}). Clearing old cache...`);
+    // Reset cache ONLY IF subject entity type changed
+    if (cachedEntityType && cachedEntityType !== currentSubjectEntityType) {
+      console.log(`🔄 Subject entity TYPE changed (${cachedEntityType} → ${currentSubjectEntityType}). Clearing old cache...`);
       await redisClient.flushAll();
     }
 
-    await redisClient.set("current_entity_id", currentEntityId);
+    await redisClient.set("current_subject_entity_type", currentSubjectEntityType);
 
     // 3️⃣ Generate idempotency key (deterministic hash)
 
@@ -72,6 +74,16 @@ router.get("/initiateAudit", async (req, res) => {
   } catch (error) {
     console.error("❌ Error in /initiateAudit:", error);
     res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/logRabbitQueue", async (req, res) => {
+  try {
+    await logAuditQueueMessages();
+    res.status(200).json({ message: "Logged all RabbitMQ queue messages to console." });
+  } catch (err) {
+    console.error("❌ Error logging RabbitMQ queue messages:", err);
+    res.status(500).json({ error: "Could not log RabbitMQ queue messages" });
   }
 });
 

@@ -12,7 +12,7 @@ export async function fetchAllRedisMessages() {
 
   for (const key of keys) {
     // Skip system keys like idempotency, current_entity_id, etc.
-    if (key.startsWith("idempotency:") || key === "current_entity_id") continue;
+    // if (key.startsWith("idempotency:") || key === "current_entity_id") continue;
 
     const val = await redisClient.get(key);
     if (!val) continue;

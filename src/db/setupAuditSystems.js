@@ -25,6 +25,18 @@ async function setupAuditTable() {
       );
     `);
 
+    // If the table already exists, ensure unique constraint is applied for subject_entity_id
+    await pool.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'audit_events_subject_entity_id_key'
+        ) THEN
+          ALTER TABLE audit_events ADD CONSTRAINT audit_events_subject_entity_id_key UNIQUE(subject_entity_id);
+        END IF;
+      END $$;
+    `);
+
     console.log("✅ audit_events table created successfully");
   } catch (err) {
     console.error("❌ Error setting up audit_events table:", err);

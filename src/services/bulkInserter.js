@@ -11,7 +11,7 @@ export async function insertBulkAuditEvents(messages) {
     return;
   }
 
-  const MAX_BATCH = 5;
+  const MAX_BATCH = 2;
   const chunks = [];
 
   for (let i = 0; i < messages.length; i += MAX_BATCH) {
@@ -54,7 +54,7 @@ export async function insertBulkAuditEvents(messages) {
         actor_id, actor_type, source, correlation_id, outcome, reason, idempotency_key
       )
       VALUES ${placeholders.join(", ")}
-      ON CONFLICT (idempotency_key) DO NOTHING;
+      ON CONFLICT (subject_entity_id) DO NOTHING;
     `;
 
     await pool.query(query, values);

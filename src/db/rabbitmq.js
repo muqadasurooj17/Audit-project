@@ -25,3 +25,24 @@ export const connectRabbitMQ = async () => {
 };
 
 export const getRabbitChannel = () => channel;
+
+/**
+ * Logs all messages currently present in audit_queue (peek only, does not ack or remove).
+ */
+export const logAuditQueueMessages = async () => {
+  if (!channel) {
+    console.error("❌ RabbitMQ channel not initialized");
+    return;
+  }
+  const queue = "audit_queue";
+  const check = await channel.checkQueue(queue);
+  console.log(`📥 audit_queue: message count = ${check.messageCount}`);
+  let count = 0;
+  while (count < check.messageCount) {
+    // non-destructive peek via .get, do not ack
+    const msg = await channel.get(queue, { noAck: true });
+    if (!msg) break;
+    console.log(`🔎 [${count + 1}]`, msg.content?.toString());
+    count++;
+  }
+};

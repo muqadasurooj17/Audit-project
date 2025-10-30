@@ -16,13 +16,23 @@ export const startWorker = async () => {
         return;
       }
 
-      console.log(`📦 Found ${messages.length} messages. Processing...`);
-      const withAnchors = await attachRelatedAnchors(messages);
-      await insertBulkAuditEvents(withAnchors);
+      if (messages.length < 2) {
+        console.log("⏳ Not enough messages to perform bulk insert (need 10+). Waiting...");
+        return;
+      }
 
-      console.log("✅ Bulk insert cycle completed.");
-    } catch (err) {
-      console.error("❌ Error in bulk worker:", err);
+      console.log(`📦 Found ${messages.length} messages. Processing...`);
+
+      // Attach related anchors
+      const processedMessages = await attachRelatedAnchors(messages);
+
+      // Insert bulk audit events
+      await insertBulkAuditEvents(processedMessages);
+
+      console.log(`✅ Bulk audit for ${processedMessages.length} messages completed.`);
+
+    } catch (error) {
+      console.error("❌ Bulk audit worker error:", error);
     }
-  }, 10 * 1000); // every 10 seconds
+  }, 10000); // Check every 1 second
 };
