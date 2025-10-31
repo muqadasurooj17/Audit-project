@@ -1,14 +1,14 @@
-// src/services/bulkInserter.js
 import { pool } from "../db/connection.js";
 import crypto from "crypto";
+import { config } from "../config.js";
 
 export async function insertBulkAuditEvents(messages) {
   if (!messages.length) {
     console.log("⚠️ No messages to insert.");
-    return;
+    return { insertedCount: 0 };
   }
 
-  const MAX_BATCH = 5;
+  const MAX_BATCH = config.BATCH_SIZE; // Use from config
   const chunks = [];
 
   for (let i = 0; i < messages.length; i += MAX_BATCH) {
@@ -55,13 +55,13 @@ export async function insertBulkAuditEvents(messages) {
       ON CONFLICT (subject_entity_id) DO NOTHING;
     `;
 
-    // Try insert and check how many rows inserted (rows = result.rowCount)
     const result = await pool.query(query, values);
     totalInserted += result.rowCount;
+
     if (result.rowCount > 0) {
       console.log(`✅ Batch ${i + 1}/${chunks.length} inserted (${result.rowCount} records)`);
     } else {
-      console.log(`⏭️ Batch ${i + 1}/${chunks.length}: All records skipped (duplicates already exist in DB)`);
+      console.log(`⏭️ Batch ${i + 1}/${chunks.length}: All records skipped (duplicates).`);
     }
   }
   return { insertedCount: totalInserted };

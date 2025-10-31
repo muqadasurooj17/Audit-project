@@ -1,10 +1,6 @@
-// src/services/relatedAnchor.js
 import redisClient from "../db/redisClient.js";
 import { safeJSONParse } from "../utils.js";
 
-/**
- * For each message, find related anchors with the same anchor_entity_type.
- */
 export async function attachRelatedAnchors(messages) {
   const allKeys = await redisClient.keys("*");
   const allRecords = [];

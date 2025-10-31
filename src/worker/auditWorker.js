@@ -1,47 +1,38 @@
 import { attachRelatedAnchors } from "../services/relatedAnchor.js";
 import { insertBulkAuditEvents } from "../services/bulkInserter.js";
-import { getRabbitChannel } from "../db/rabbitmq.js";
+import { getRabbitChannel, acknowledgeRabbitMQMessages } from "../db/rabbitmq.js";
+import { config } from "../config.js";
 
 export const startWorker = async () => {
   console.log("👂 Bulk audit worker started...");
 
   const channel = getRabbitChannel();
-  const queueName = "audit_events";
-  const BATCH_SIZE = 5;
+  const { QUEUE } = config.RABBITMQ;
+  const { BATCH_SIZE } = config;
+
   const buffer = [];
 
-  await channel.assertQueue(queueName, { durable: true });
-  channel.prefetch(BATCH_SIZE); // RabbitMQ delivers only BATCH_SIZE unacked messages
+  await channel.assertQueue(QUEUE, { durable: true });
+  channel.prefetch(BATCH_SIZE);
 
   channel.consume(
-    queueName,
+    QUEUE,
     async (msg) => {
       if (!msg) return;
 
       try {
-        // Push message to buffer
         const content = JSON.parse(msg.content.toString());
         buffer.push({ raw: msg, content });
 
-        // Process only when we have BATCH_SIZE messages
         if (buffer.length >= BATCH_SIZE) {
-          console.log(`📦 Received ${buffer.length} messages — processing batch...`);
+          console.log(`📦 Processing ${buffer.length} messages...`);
 
-          // Extract content for processing
-          const messageContents = buffer.map((m) => m.content);
-
-          // 1️⃣ Attach related anchors
-          const processedMessages = await attachRelatedAnchors(messageContents);
-
-          // 2️⃣ Insert bulk audit events
+          const processedMessages = await attachRelatedAnchors(buffer.map((m) => m.content));
           const insertResult = await insertBulkAuditEvents(processedMessages);
-          if (insertResult?.insertedCount > 0) {
-            console.log(`✅ Bulk audit completed for ${insertResult.insertedCount} messages.`);
-            buffer.forEach((m) => channel.ack(m.raw));
-          } else {
-            console.log("⚠️ No new records inserted (duplicates). Acknowledging anyway.");
-            buffer.forEach((m) => channel.ack(m.raw));
-          }
+
+          await acknowledgeRabbitMQMessages(buffer.map((m) => ({ message: m.raw })));
+
+          console.log(`✅ Acknowledged ${insertResult.insertedCount} messages.`);
           buffer.length = 0;
         }
       } catch (error) {
@@ -53,6 +44,4 @@ export const startWorker = async () => {
     },
     { noAck: false }
   );
-
-  console.log("🚀 Worker ready and waiting for messages...");
 };

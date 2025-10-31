@@ -43,6 +43,30 @@ const dummyData = {
     },
   
     // ----------- ORDER -----------
+    OI_9931: {
+      anchor_entity_type: "ORDER",
+      anchor_entity_id: "ORD_4111",
+      subject_entity_type: "ORDER_ITEM",
+      subject_entity_id: "OI_9931",
+      related_anchors: [
+        { type: "KITCHEN", id: "KIT_123" },
+        { type: "USER", id: "USR_88" }
+      ],
+      action_code: "order.item.update",
+      data: { diff: { quantity: { from: 1, to: 2 } } }
+    },
+    OI_9932: {
+      anchor_entity_type: "ORDER",
+      anchor_entity_id: "ORD_4222",
+      subject_entity_type: "ORDER_ITEM",
+      subject_entity_id: "OI_9932",
+      related_anchors: [
+        { type: "KITCHEN", id: "KIT_123" },
+        { type: "USER", id: "USR_88" }
+      ],
+      action_code: "order.item.update",
+      data: { diff: { quantity: { from: 1, to: 2 } } }
+    },
     OI_9933: {
       anchor_entity_type: "ORDER",
       anchor_entity_id: "ORD_4821",

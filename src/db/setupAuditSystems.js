@@ -2,7 +2,7 @@ import { pool } from "./connection.js";
 
 export async function setupAuditTable() {
   try {
-    // 1️⃣ Create main audit table
+
     await pool.query(`
       CREATE TABLE IF NOT EXISTS audit_events (
         id BIGSERIAL PRIMARY KEY,
@@ -23,21 +23,14 @@ export async function setupAuditTable() {
         idempotency_key TEXT UNIQUE
       );
     `);
-    // 2️⃣ Ensure unique constraint on subject_entity_id if missing
-    const { rows } = await pool.query(`
-      SELECT 1
-      FROM pg_constraint
-      WHERE conname = 'audit_events_subject_entity_id_key';
+
+    await pool.query(`
+      ALTER TABLE audit_events
+      ADD CONSTRAINT IF NOT EXISTS audit_events_subject_entity_id_key
+      UNIQUE (subject_entity_id);
     `);
 
-    if (rows.length === 0) {
-      await pool.query(`
-        ALTER TABLE audit_events
-        ADD CONSTRAINT audit_events_subject_entity_id_key
-        UNIQUE (subject_entity_id);
-      `);
-      console.log("✅ Unique constraint added on subject_entity_id.");
-    }
+    console.log("✅ audit_events table is ready.");
   } catch (err) {
     console.error("❌ Error setting up audit_events table:", err);
   }
