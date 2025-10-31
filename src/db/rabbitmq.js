@@ -8,7 +8,7 @@ const routingKey = "audit.key";
 
 export const connectRabbitMQ = async () => {
   try {
-    const connection = await amqp.connect(process.env.RABBITMQ_URL || "amqp://localhost");
+    const connection = await amqp.connect(process.env.RABBITMQ_URL);
     channel = await connection.createChannel();
     console.log("✅ Connected to RabbitMQ");
 

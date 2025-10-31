@@ -2,16 +2,13 @@
 import { pool } from "../db/connection.js";
 import crypto from "crypto";
 
-/**
- * Inserts audit messages in bulk (up to 200 per batch)
- */
 export async function insertBulkAuditEvents(messages) {
   if (!messages.length) {
     console.log("⚠️ No messages to insert.");
     return;
   }
 
-  const MAX_BATCH = 2;
+  const MAX_BATCH = 5;
   const chunks = [];
 
   for (let i = 0; i < messages.length; i += MAX_BATCH) {

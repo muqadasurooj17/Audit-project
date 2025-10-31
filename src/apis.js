@@ -51,12 +51,11 @@ router.get("/initiateAudit", async (req, res) => {
     }
 
     // 5️⃣ Mark idempotency key as used
-    await redisClient.setEx(`idempotency:${idempotencyKey}`, TTL_SECONDS, "processed");
+    // await redisClient.setEx(`idempotency:${idempotencyKey}`, TTL_SECONDS, "processed");
 
     // 6️⃣ Prepare response
     const responseData = {
       ...record,
-      // idempotency_key: idempotencyKey,
       occurred_at: new Date().toISOString(),
     };
 
@@ -74,16 +73,6 @@ router.get("/initiateAudit", async (req, res) => {
   } catch (error) {
     console.error("❌ Error in /initiateAudit:", error);
     res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-router.get("/logRabbitQueue", async (req, res) => {
-  try {
-    await logAuditQueueMessages();
-    res.status(200).json({ message: "Logged all RabbitMQ queue messages to console." });
-  } catch (err) {
-    console.error("❌ Error logging RabbitMQ queue messages:", err);
-    res.status(500).json({ error: "Could not log RabbitMQ queue messages" });
   }
 });
 

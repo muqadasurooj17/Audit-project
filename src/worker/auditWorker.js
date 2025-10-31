@@ -1,65 +1,58 @@
-// src/worker/auditWorker.js
-import  {fetchAllRedisMessages } from "../services/service.js";
 import { attachRelatedAnchors } from "../services/relatedAnchor.js";
 import { insertBulkAuditEvents } from "../services/bulkInserter.js";
-import { consumeRabbitMQMessages, acknowledgeRabbitMQMessages, getRabbitChannel } from "../db/rabbitmq.js";
+import { getRabbitChannel } from "../db/rabbitmq.js";
 
 export const startWorker = async () => {
   console.log("👂 Bulk audit worker started...");
 
-  setInterval(async () => {
-    try {
-      console.log("🔄 Checking RabbitMQ for pending messages...");
-      const rabbitMQMessages = await consumeRabbitMQMessages(10);
-      
-      if (!rabbitMQMessages.length) {
-        console.log("💤 No new messages found in RabbitMQ, waiting...");
-        return;
-      }
+  const channel = getRabbitChannel();
+  const queueName = "audit_events";
+  const BATCH_SIZE = 5;
+  const buffer = [];
 
-      if (rabbitMQMessages.length < 2) {
-        const channel = getRabbitChannel();
-        for (const item of rabbitMQMessages) {
-          if (item.message && channel) {
-            channel.nack(item.message, false, true); // Requeue
+  await channel.assertQueue(queueName, { durable: true });
+  channel.prefetch(BATCH_SIZE); // RabbitMQ delivers only BATCH_SIZE unacked messages
+
+  channel.consume(
+    queueName,
+    async (msg) => {
+      if (!msg) return;
+
+      try {
+        // Push message to buffer
+        const content = JSON.parse(msg.content.toString());
+        buffer.push({ raw: msg, content });
+
+        // Process only when we have BATCH_SIZE messages
+        if (buffer.length >= BATCH_SIZE) {
+          console.log(`📦 Received ${buffer.length} messages — processing batch...`);
+
+          // Extract content for processing
+          const messageContents = buffer.map((m) => m.content);
+
+          // 1️⃣ Attach related anchors
+          const processedMessages = await attachRelatedAnchors(messageContents);
+
+          // 2️⃣ Insert bulk audit events
+          const insertResult = await insertBulkAuditEvents(processedMessages);
+          if (insertResult?.insertedCount > 0) {
+            console.log(`✅ Bulk audit completed for ${insertResult.insertedCount} messages.`);
+            buffer.forEach((m) => channel.ack(m.raw));
+          } else {
+            console.log("⚠️ No new records inserted (duplicates). Acknowledging anyway.");
+            buffer.forEach((m) => channel.ack(m.raw));
           }
+          buffer.length = 0;
         }
-        return;
+      } catch (error) {
+        console.error("❌ Bulk audit worker error:", error);
+        buffer.forEach((m) => channel.nack(m.raw, false, true));
+        buffer.length = 0;
+        console.log("⚠️ Messages rejected and requeued due to error.");
       }
+    },
+    { noAck: false }
+  );
 
-      console.log(`📦 Found ${rabbitMQMessages.length} messages in RabbitMQ. Processing...`);
-
-      // Extract message contents
-      const messageContents = rabbitMQMessages.map(item => item.content);
-
-      // Attach related anchors
-      const processedMessages = await attachRelatedAnchors(messageContents);
-
-      // Insert bulk audit events
-      const insertResult = await insertBulkAuditEvents(processedMessages);
-
-      if (insertResult && insertResult.insertedCount && insertResult.insertedCount > 0) {
-        console.log(`✅ Bulk audit for ${insertResult.insertedCount} messages completed.`);
-        
-        // Acknowledge RabbitMQ messages only after successful DB insert
-        await acknowledgeRabbitMQMessages(rabbitMQMessages);
-        console.log("✅ RabbitMQ messages acknowledged.");
-      } else {
-        // If no records were inserted (all duplicates), still ack to remove from queue
-        console.log("⚠️ No new records inserted (all duplicates). Acknowledging messages anyway.");
-        await acknowledgeRabbitMQMessages(rabbitMQMessages);
-      }
-
-    } catch (error) {
-      console.error("❌ Bulk audit worker error:", error);
-      // Reject messages back to queue on error
-      const channel = getRabbitChannel();
-      for (const item of rabbitMQMessages) {
-        if (item.message && channel) {
-          channel.nack(item.message, false, true); // Requeue on error
-        }
-      }
-      console.log("⚠️ Messages rejected and requeued due to error.");
-    }
-  }, 10000); // Check every 10 seconds
+  console.log("🚀 Worker ready and waiting for messages...");
 };
